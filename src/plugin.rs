@@ -114,8 +114,8 @@ impl Plugin for EditorPlugin {
             .add_system_set(
                 SystemSet::on_enter(EditorState::Editing)
                     // HACK: we MUST load chunks on entering this state so they will be seen as dirty by the mesh generator
-                    .with_system(load_chunks_from_db.system())
-                    .with_system(initialize_editor.system()),
+                    .with_system(load_chunks_from_db.system().label("load_chunks"))
+                    .with_system(initialize_editor.system().after("load_chunks")),
             )
             // Save the map to our database
             // TODO: this should happen in veldspar proper as edits are made
@@ -180,7 +180,7 @@ fn wait_for_assets_loaded(
 }
 
 fn initialize_editor(mut commands: Commands, mut voxel_editor: VoxelEditor, config: Res<Config>) {
-    if voxel_editor.map.voxels.storage().is_empty() {
+    if voxel_editor.edit_buffer_is_empty() {
         // TODO: remove this once we can create voxels out of thin air
         log::info!("Initializing voxels");
         let write_extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([64, 64, 64]));
