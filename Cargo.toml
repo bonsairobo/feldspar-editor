@@ -1,0 +1,34 @@
+[package]
+name = "feldspar-editor"
+version = "0.1.0"
+authors = ["Duncan <bonsairobo@gmail.com>"]
+edition = "2018"
+
+[profile]
+dev = { opt-level = 2 }
+release = { lto = "thin" }
+
+[dependencies]
+approx = "0.4"
+ron = "0.6"
+serde = "1.0"
+
+[dependencies.bevy]
+version = "0.5"
+# path = "../bevy"
+# git = "https://github.com/bevyengine/bevy"
+# branch = "main"
+# rev = "7a511394"
+default-features = false
+features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
+
+[dependencies.feldspar]
+# git = "https://github.com/bonsairobo/feldspar"
+# rev = "f0e5132"
+path = "../feldspar"
+
+[dependencies.smooth-bevy-cameras]
+git = "https://github.com/bonsairobo/smooth-bevy-cameras"
+rev = "8782b98"
+# branch = "main"
+# path = "../smooth-bevy-cameras"
