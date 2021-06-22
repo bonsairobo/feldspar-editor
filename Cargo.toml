@@ -23,9 +23,10 @@ default-features = false
 features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
 
 [dependencies.feldspar]
-# git = "https://github.com/bonsairobo/feldspar"
-# rev = "f0e5132"
-path = "../feldspar"
+git = "https://github.com/bonsairobo/feldspar"
+branch = "main"
+# rev = "d18e010"
+# path = "../feldspar"
 
 [dependencies.smooth-bevy-cameras]
 git = "https://github.com/bonsairobo/smooth-bevy-cameras"
