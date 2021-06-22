@@ -118,7 +118,7 @@ impl Plugin for EditorPlugin {
                     .with_system(initialize_editor.system()),
             )
             // Save the map to our database
-            // TODO: should just save on_exit
+            // TODO: this should happen in veldspar proper as edits are made
             .add_system_set(
                 SystemSet::on_update(EditorState::Editing).with_system(save_map_to_db.system()),
             );
