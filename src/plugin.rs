@@ -124,25 +124,26 @@ struct LoadingTexture(Handle<Texture>);
 
 fn start_loading(
     mut commands: Commands,
-    // mut voxel_map: ResMut<SdfVoxelMap>,
-    // mut pool: Res<IoTaskPool>,
+    mut voxel_map: ResMut<SdfVoxelMap>,
+    pool: Res<IoTaskPool>,
     asset_server: Res<AssetServer>,
 ) {
-    // let db = sled::Config::default()
-    //     .path("/tmp/world1".to_owned())
-    //     .use_compression(false)
-    //     .mode(sled::Mode::LowSpace)
-    //     .open()
-    //     .expect("Failed to open chunk database");
-    // let tree = db
-    //     .open_tree("chunks")
-    //     .expect("Failed to open chunk database");
-    // let world_db = VoxelWorldDb::new(tree);
+    let db = sled::Config::default()
+        .path("/tmp/world1".to_owned())
+        .use_compression(false)
+        .mode(sled::Mode::LowSpace)
+        .open()
+        .expect("Failed to open world database");
+    let chunk_tree = db
+        .open_tree("chunks")
+        .expect("Failed to open chunk database");
+    let world_db = VoxelWorldDb::new(chunk_tree);
 
-    // let load_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
+    let load_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
+    let load_future = world_db.load_chunks_into_map(0, load_extent, &mut voxel_map);
+    pool.scope(|s| s.spawn(load_future));
 
-    // let load_future = world_db.load_chunks_into_map(0, load_extent, &mut voxel_map);
-    // pool.spawn(load_future);
+    commands.insert_resource(world_db);
 
     commands.insert_resource(LoadingTexture(
         asset_server.load("grass_rock_snow_dirt/base_color.png"),
