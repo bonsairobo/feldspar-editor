@@ -131,6 +131,7 @@ pub enum EditorState {
     Editing,
 }
 
+// TODO: we should just spawn our camera as a "witness" and have feldspar load the map around it
 fn load_chunks_from_db(
     mut commands: Commands,
     mut voxel_editor: VoxelEditor,
