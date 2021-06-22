@@ -1,6 +1,7 @@
-# Building Blocks Editor
+# Feldspar Editor
 
-Voxel map editor using [building-blocks](https://github.com/bonsairobo/building-blocks) and [bevy](https://github.com/bevyengine/bevy).
+Voxel map editor using the [feldspar](https://github.com/bonsairobo/feldspar) voxel plugin for
+[bevy](https://github.com/bevyengine/bevy).
 
 ## Warning
 
