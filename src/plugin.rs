@@ -178,13 +178,15 @@ fn wait_for_assets_loaded(
 }
 
 fn initialize_editor(mut commands: Commands, mut voxel_editor: VoxelEditor, config: Res<Config>) {
-    // TODO: remove this once we can create voxels out of thin air
-    // log::info!("Initializing voxels");
-    // let write_extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([64, 64, 64]));
-    // voxel_editor.edit_extent_and_touch_neighbors(write_extent, |_p, (voxel_type, dist)| {
-    //     *voxel_type = VoxelType(2);
-    //     *dist = Sd8::from(-10.0);
-    // });
+    if voxel_editor.map.voxels.storage().is_empty() {
+        // TODO: remove this once we can create voxels out of thin air
+        log::info!("Initializing voxels");
+        let write_extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([64, 64, 64]));
+        voxel_editor.edit_extent_and_touch_neighbors(write_extent, |_p, (voxel_type, dist)| {
+            *voxel_type = VoxelType(2);
+            *dist = Sd8::from(-10.0);
+        });
+    }
 
     create_lights(&mut commands);
     initialize_camera(&mut commands, config.camera);
