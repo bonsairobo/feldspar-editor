@@ -6,7 +6,8 @@ use crate::{
 use feldspar::{
     bb::core::prelude::*,
     bb::storage::{prelude::*, sled},
-    SdfVoxelMap, VoxelEditor, VoxelRenderAssets, VoxelType, VoxelWorldDb, VoxelWorldPlugin,
+    SdfVoxelMap, ThreadLocalVoxelCache, VoxelEditor, VoxelRenderAssets, VoxelType, VoxelWorldDb,
+    VoxelWorldPlugin,
 };
 
 use bevy::{
@@ -14,9 +15,10 @@ use bevy::{
     asset::{prelude::*, AssetPlugin},
     core::CorePlugin,
     ecs::prelude::*,
-    input::InputPlugin,
+    input::{Input, InputPlugin},
     math::prelude::*,
     pbr::{Light, LightBundle, PbrPlugin},
+    prelude::KeyCode,
     render::{prelude::*, wireframe::WireframeConfig, wireframe::WireframePlugin, RenderPlugin},
     tasks::IoTaskPool,
     transform::{components::Transform, TransformPlugin},
@@ -101,7 +103,8 @@ impl Plugin for EditorPlugin {
             .add_state(EditorState::Loading)
             // Load assets.
             .add_system_set(
-                SystemSet::on_enter(EditorState::Loading).with_system(start_loading.system()),
+                SystemSet::on_enter(EditorState::Loading)
+                    .with_system(start_loading_render_assets.system()),
             )
             .add_system_set(
                 SystemSet::on_update(EditorState::Loading)
@@ -109,7 +112,14 @@ impl Plugin for EditorPlugin {
             )
             // Initialize entities.
             .add_system_set(
-                SystemSet::on_enter(EditorState::Editing).with_system(initialize_editor.system()),
+                SystemSet::on_enter(EditorState::Editing)
+                    // HACK: we MUST load chunks on entering this state so they will be seen as dirty by the mesh generator
+                    .with_system(load_chunks_from_db.system())
+                    .with_system(initialize_editor.system()),
+            )
+            // Save the map to our database
+            .add_system_set(
+                SystemSet::on_update(EditorState::Editing).with_system(save_map_to_db.system()),
             );
     }
 }
@@ -120,13 +130,10 @@ pub enum EditorState {
     Editing,
 }
 
-struct LoadingTexture(Handle<Texture>);
-
-fn start_loading(
+fn load_chunks_from_db(
     mut commands: Commands,
-    mut voxel_map: ResMut<SdfVoxelMap>,
+    mut voxel_editor: VoxelEditor,
     pool: Res<IoTaskPool>,
-    asset_server: Res<AssetServer>,
 ) {
     let db = sled::Config::default()
         .path("/tmp/world1".to_owned())
@@ -140,11 +147,15 @@ fn start_loading(
     let world_db = VoxelWorldDb::new(chunk_tree);
 
     let load_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
-    let load_future = world_db.load_chunks_into_map(0, load_extent, &mut voxel_map);
+    let load_future = world_db.load_chunks_into_map(0, load_extent, &mut voxel_editor);
     pool.scope(|s| s.spawn(load_future));
 
     commands.insert_resource(world_db);
+}
 
+struct LoadingTexture(Handle<Texture>);
+
+fn start_loading_render_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(LoadingTexture(
         asset_server.load("grass_rock_snow_dirt/base_color.png"),
     ));
@@ -157,7 +168,7 @@ fn wait_for_assets_loaded(
     mut state: ResMut<State<EditorState>>,
 ) {
     if textures.get(&loading_texture.0).is_some() {
-        println!("Done loading mesh texture");
+        log::info!("Done loading mesh texture");
 
         commands.insert_resource(VoxelRenderAssets {
             mesh_base_color: loading_texture.0.clone(),
@@ -168,12 +179,12 @@ fn wait_for_assets_loaded(
 
 fn initialize_editor(mut commands: Commands, mut voxel_editor: VoxelEditor, config: Res<Config>) {
     // TODO: remove this once we can create voxels out of thin air
-    println!("Initializing voxels");
-    let write_extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([64, 64, 64]));
-    voxel_editor.edit_extent_and_touch_neighbors(write_extent, |_p, (voxel_type, dist)| {
-        *voxel_type = VoxelType(2);
-        *dist = Sd8::from(-10.0);
-    });
+    // log::info!("Initializing voxels");
+    // let write_extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([64, 64, 64]));
+    // voxel_editor.edit_extent_and_touch_neighbors(write_extent, |_p, (voxel_type, dist)| {
+    //     *voxel_type = VoxelType(2);
+    //     *dist = Sd8::from(-10.0);
+    // });
 
     create_lights(&mut commands);
     initialize_camera(&mut commands, config.camera);
@@ -204,4 +215,37 @@ fn initialize_camera(commands: &mut Commands, camera_config: CameraConfig) {
     let eye = Vec3::new(100.0, 100.0, 100.0);
     let target = Vec3::new(0.0, 0.0, 0.0);
     create_camera_entity(commands, camera_config, eye, target);
+}
+
+fn save_map_to_db(
+    world_db: Res<VoxelWorldDb>,
+    local_cache: Res<ThreadLocalVoxelCache>,
+    voxel_map: ResMut<SdfVoxelMap>,
+    pool: Res<IoTaskPool>,
+    keys: Res<Input<KeyCode>>,
+) {
+    if !keys.just_pressed(KeyCode::S) {
+        return;
+    }
+
+    log::info!("Saving map to DB");
+
+    let tls = local_cache.get();
+    let reader = voxel_map.reader(&tls);
+
+    let chunk_refs: Vec<_> = reader.storage().into_iter().map(|(k, v)| (*k, v)).collect();
+
+    let write_future = world_db.chunks().write_chunks(chunk_refs.into_iter());
+
+    for result in pool.scope(|s| s.spawn(write_future)) {
+        if result.is_err() {
+            panic!("Error saving to DB: {:?}", result);
+        }
+    }
+
+    world_db
+        .chunks()
+        .tree()
+        .flush()
+        .expect("Failed to flush DB");
 }
