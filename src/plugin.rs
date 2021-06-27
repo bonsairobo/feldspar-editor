@@ -99,7 +99,7 @@ impl Plugin for EditorPlugin {
             .add_plugin(ImmediateModePlugin)
             .add_plugin(CameraPlugin)
             .add_plugin(VoxelPickingPlugin)
-            .add_plugin(EditToolsPlugin::new(self.config.feldspar.chunk_shape))
+            .add_plugin(EditToolsPlugin::new(self.config.feldspar.map.chunk_shape))
             .add_state(EditorState::Loading)
             // Load assets.
             .add_system_set(
@@ -148,7 +148,7 @@ fn load_chunks_from_db(
         .expect("Failed to open chunk database");
     let world_db = VoxelWorldDb::new(chunk_tree);
 
-    let load_extent = Extent3i::from_min_and_shape(Point3i::ZERO, Point3i::fill(64));
+    let load_extent = Extent3i::from_min_and_shape(Point3i::fill(-1024), Point3i::fill(2048));
     let load_future = world_db.load_chunks_into_map(0, load_extent, &mut voxel_editor);
     pool.scope(|s| s.spawn(load_future));
 
