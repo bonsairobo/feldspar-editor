@@ -99,7 +99,7 @@ impl Plugin for EditorPlugin {
             .add_plugin(ImmediateModePlugin)
             .add_plugin(CameraPlugin)
             .add_plugin(VoxelPickingPlugin)
-            .add_plugin(EditToolsPlugin::new(self.config.feldspar.map.chunk_shape))
+            .add_plugin(EditToolsPlugin::new(self.config.feldspar.map.chunk_shape()))
             .add_state(EditorState::Loading)
             // Load assets.
             .add_system_set(
