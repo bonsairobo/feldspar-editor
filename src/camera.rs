@@ -6,6 +6,8 @@ pub use cursor_ray::{CursorRay, CursorRayCalculator, CursorRayCameraTag};
 
 use cursor_ray::CursorRayPlugin;
 
+use feldspar::Witness;
+
 use bevy::{app::prelude::*, ecs::prelude::*, math::prelude::*};
 use smooth_bevy_cameras::{
     controllers::{orbit::*, unreal::*},
@@ -49,6 +51,7 @@ pub fn create_unreal_camera_entity(
             target,
         ))
         .insert(CursorRayCameraTag)
+        .insert(Witness::default())
         .id()
 }
 
@@ -66,5 +69,6 @@ pub fn create_orbit_camera_entity(
             target,
         ))
         .insert(CursorRayCameraTag)
+        .insert(Witness::default())
         .id()
 }

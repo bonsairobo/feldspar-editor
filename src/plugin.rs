@@ -6,8 +6,8 @@ use crate::{
 use feldspar::{
     bb::core::prelude::*,
     bb::storage::{prelude::*, sled},
-    SdfVoxelMap, ThreadLocalVoxelCache, VoxelEditor, VoxelRenderAssets, VoxelType, VoxelWorldDb,
-    VoxelWorldPlugin,
+    EditBuffer, SdfVoxelMap, ThreadLocalVoxelCache, VoxelEditor, VoxelRenderAssets, VoxelType,
+    VoxelWorldDb, VoxelWorldPlugin,
 };
 
 use bevy::{
@@ -134,7 +134,8 @@ pub enum EditorState {
 // TODO: we should just spawn our camera as a "witness" and have feldspar load the map around it
 fn load_chunks_from_db(
     mut commands: Commands,
-    mut voxel_editor: VoxelEditor,
+    mut map: ResMut<SdfVoxelMap>,
+    mut edit_buffer: ResMut<EditBuffer>,
     pool: Res<IoTaskPool>,
 ) {
     let db = sled::Config::default()
@@ -148,8 +149,12 @@ fn load_chunks_from_db(
         .expect("Failed to open chunk database");
     let world_db = VoxelWorldDb::new(chunk_tree);
 
-    let load_extent = Extent3i::from_min_and_shape(Point3i::fill(-1024), Point3i::fill(2048));
-    let load_future = world_db.load_chunks_into_map(0, load_extent, &mut voxel_editor);
+    let center_superchunk = Octant::new(
+        map.chunk_index.superchunk_exponent() as i32,
+        PointN([-1; 3]),
+    );
+    let load_future =
+        world_db.load_superchunk_into_map(center_superchunk, &mut map, &mut edit_buffer);
     pool.scope(|s| s.spawn(load_future));
 
     commands.insert_resource(world_db);
