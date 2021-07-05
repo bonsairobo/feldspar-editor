@@ -15,7 +15,7 @@
             max_cached_chunks: 100000,
             max_chunks_compressed_per_frame_per_thread: 50,
         ),
-        witness_radius: 1024,
+        witness_radius: 1,
     ),
     // camera: Orbit(OrbitCameraController(
     //     enabled: true,

@@ -74,7 +74,7 @@ fn reversible_restore_snapshot(
 
         let mut redo_snap_chunks = empty_sdf_chunk_hash_map(indexer.chunk_shape());
         for (chunk_key, chunk) in storage.into_iter() {
-            editor.insert_chunk_and_touch_neighbors(chunk_key.minimum, chunk);
+            editor.write_chunk_and_touch_neighbors(chunk_key.minimum, chunk);
             let old_chunk = editor
                 .map
                 .voxels

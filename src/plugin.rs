@@ -6,7 +6,7 @@ use crate::{
 use feldspar::{
     bb::core::prelude::*,
     bb::storage::{prelude::*, sled},
-    EditBuffer, SdfVoxelMap, ThreadLocalVoxelCache, VoxelEditor, VoxelRenderAssets, VoxelType,
+    ChangeBuffer, SdfVoxelMap, ThreadLocalVoxelCache, VoxelEditor, VoxelRenderAssets, VoxelType,
     VoxelWorldDb, VoxelWorldPlugin,
 };
 
@@ -134,8 +134,8 @@ pub enum EditorState {
 // TODO: we should just spawn our camera as a "witness" and have feldspar load the map around it
 fn load_chunks_from_db(
     mut commands: Commands,
-    mut map: ResMut<SdfVoxelMap>,
-    mut edit_buffer: ResMut<EditBuffer>,
+    config: Res<Config>,
+    mut change_buffer: ResMut<ChangeBuffer>,
     pool: Res<IoTaskPool>,
 ) {
     let db = sled::Config::default()
@@ -150,11 +150,11 @@ fn load_chunks_from_db(
     let world_db = VoxelWorldDb::new(chunk_tree);
 
     let center_superchunk = Octant::new(
-        map.chunk_index.superchunk_exponent() as i32,
+        config.feldspar.map.superchunk_exponent as i32,
         PointN([-1; 3]),
     );
     let load_future =
-        world_db.load_superchunk_into_map(center_superchunk, &mut map, &mut edit_buffer);
+        world_db.load_superchunk_into_change_buffer(center_superchunk, &mut change_buffer);
     pool.scope(|s| s.spawn(load_future));
 
     commands.insert_resource(world_db);
@@ -185,7 +185,7 @@ fn wait_for_assets_loaded(
 }
 
 fn initialize_editor(mut commands: Commands, mut voxel_editor: VoxelEditor, config: Res<Config>) {
-    if voxel_editor.edit_buffer_is_empty() {
+    if !voxel_editor.change_buffer_has_data() {
         // TODO: remove this once we can create voxels out of thin air
         log::info!("Initializing voxels");
         let write_extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([64, 64, 64]));
