@@ -6,7 +6,7 @@ use crate::{
 use feldspar::{
     bb::core::prelude::*,
     bb::storage::{prelude::*, sled},
-    SdfVoxelMap, ThreadLocalVoxelCache, VoxelEditor, VoxelRenderAssets, VoxelType, VoxelWorldDb,
+    SdfVoxelMap, ThreadLocalVoxelCache, VoxelDb, VoxelEditor, VoxelRenderAssets, VoxelType,
     VoxelWorldPlugin,
 };
 
@@ -114,7 +114,7 @@ impl Plugin for EditorPlugin {
             .add_system_set(
                 SystemSet::on_enter(EditorState::Editing)
                     // HACK: we MUST load chunks on entering this state so they will be seen as dirty by the mesh generator
-                    .with_system(open_world_database.system().label("load_chunks"))
+                    .with_system(open_voxel_database.system().label("load_chunks"))
                     .with_system(initialize_editor.system().after("load_chunks")),
             )
             // Save the map to our database
@@ -131,18 +131,21 @@ pub enum EditorState {
     Editing,
 }
 
-fn open_world_database(mut commands: Commands, config: Res<Config>) {
+fn open_voxel_database(mut commands: Commands, config: Res<Config>) {
     let db = sled::Config::default()
         .path(config.database_path.clone())
         .use_compression(false)
         .mode(sled::Mode::LowSpace)
         .open()
         .expect("Failed to open world database");
-    let chunk_tree = db
-        .open_tree("chunks")
+    let main_tree = db
+        .open_tree("main_chunks")
+        .expect("Failed to open chunk database");
+    let edit_tree = db
+        .open_tree("edited_chunks")
         .expect("Failed to open chunk database");
 
-    commands.insert_resource(VoxelWorldDb::new(chunk_tree));
+    commands.insert_resource(VoxelDb::new(main_tree, edit_tree));
 }
 
 struct LoadingTexture(Handle<Texture>);
@@ -210,7 +213,7 @@ fn initialize_camera(commands: &mut Commands, camera_config: CameraConfig) {
 }
 
 fn save_map_to_db(
-    world_db: Res<VoxelWorldDb>,
+    world_db: Res<VoxelDb>,
     local_cache: Res<ThreadLocalVoxelCache>,
     voxel_map: ResMut<SdfVoxelMap>,
     pool: Res<IoTaskPool>,
