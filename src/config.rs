@@ -3,10 +3,11 @@ use smooth_bevy_cameras::controllers::{
     orbit::OrbitCameraController, unreal::UnrealCameraController,
 };
 
-#[derive(Clone, Copy, Deserialize, Default)]
+#[derive(Clone, Deserialize, Default)]
 pub struct Config {
     pub feldspar: feldspar::Config,
     pub bevy: BevyConfig,
+    pub database_path: String,
     pub camera: CameraConfig,
 }
 

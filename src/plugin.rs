@@ -6,8 +6,8 @@ use crate::{
 use feldspar::{
     bb::core::prelude::*,
     bb::storage::{prelude::*, sled},
-    ChangeBuffer, SdfVoxelMap, ThreadLocalVoxelCache, VoxelEditor, VoxelRenderAssets, VoxelType,
-    VoxelWorldDb, VoxelWorldPlugin,
+    SdfVoxelMap, ThreadLocalVoxelCache, VoxelEditor, VoxelRenderAssets, VoxelType, VoxelWorldDb,
+    VoxelWorldPlugin,
 };
 
 use bevy::{
@@ -90,7 +90,7 @@ impl Plugin for EditorPlugin {
             })
             .add_plugins(BevyPlugins::new(self.config.bevy))
             // Editor stuff.
-            .insert_resource(self.config)
+            .insert_resource(self.config.clone())
             .add_plugin(VoxelWorldPlugin::new(
                 self.config.feldspar,
                 EditorState::Editing,
@@ -114,7 +114,7 @@ impl Plugin for EditorPlugin {
             .add_system_set(
                 SystemSet::on_enter(EditorState::Editing)
                     // HACK: we MUST load chunks on entering this state so they will be seen as dirty by the mesh generator
-                    .with_system(load_chunks_from_db.system().label("load_chunks"))
+                    .with_system(open_world_database.system().label("load_chunks"))
                     .with_system(initialize_editor.system().after("load_chunks")),
             )
             // Save the map to our database
@@ -131,15 +131,9 @@ pub enum EditorState {
     Editing,
 }
 
-// TODO: we should just spawn our camera as a "witness" and have feldspar load the map around it
-fn load_chunks_from_db(
-    mut commands: Commands,
-    config: Res<Config>,
-    mut change_buffer: ResMut<ChangeBuffer>,
-    pool: Res<IoTaskPool>,
-) {
+fn open_world_database(mut commands: Commands, config: Res<Config>) {
     let db = sled::Config::default()
-        .path("/tmp/world1".to_owned())
+        .path(config.database_path.clone())
         .use_compression(false)
         .mode(sled::Mode::LowSpace)
         .open()
@@ -147,17 +141,8 @@ fn load_chunks_from_db(
     let chunk_tree = db
         .open_tree("chunks")
         .expect("Failed to open chunk database");
-    let world_db = VoxelWorldDb::new(chunk_tree);
 
-    let center_superchunk = Octant::new(
-        config.feldspar.map.superchunk_exponent as i32,
-        PointN([-1; 3]),
-    );
-    let load_future =
-        world_db.load_superchunk_into_change_buffer(center_superchunk, &mut change_buffer);
-    pool.scope(|s| s.spawn(load_future));
-
-    commands.insert_resource(world_db);
+    commands.insert_resource(VoxelWorldDb::new(chunk_tree));
 }
 
 struct LoadingTexture(Handle<Texture>);
@@ -185,15 +170,13 @@ fn wait_for_assets_loaded(
 }
 
 fn initialize_editor(mut commands: Commands, mut voxel_editor: VoxelEditor, config: Res<Config>) {
-    if !voxel_editor.change_buffer_has_data() {
-        // TODO: remove this once we can create voxels out of thin air
-        log::info!("Initializing voxels");
-        let write_extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([64, 64, 64]));
-        voxel_editor.edit_extent_and_touch_neighbors(write_extent, |_p, (voxel_type, dist)| {
-            *voxel_type = VoxelType(2);
-            *dist = Sd8::from(-10.0);
-        });
-    }
+    // TODO: remove this once we can create voxels out of thin air
+    log::info!("Initializing voxels");
+    let write_extent = Extent3i::from_min_and_shape(PointN([0, 0, 0]), PointN([64, 2, 64]));
+    voxel_editor.edit_extent_and_touch_neighbors(write_extent, |_p, (voxel_type, dist)| {
+        *voxel_type = VoxelType(2);
+        *dist = Sd8::from(-10.0);
+    });
 
     create_lights(&mut commands);
     initialize_camera(&mut commands, config.camera);
