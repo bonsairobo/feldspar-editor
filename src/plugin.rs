@@ -113,7 +113,6 @@ impl Plugin for EditorPlugin {
             // Initialize entities.
             .add_system_set(
                 SystemSet::on_enter(EditorState::Editing)
-                    // HACK: we MUST load chunks on entering this state so they will be seen as dirty by the mesh generator
                     .with_system(open_voxel_database.system().label("load_chunks"))
                     .with_system(initialize_editor.system().after("load_chunks")),
             )
