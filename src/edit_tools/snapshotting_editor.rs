@@ -1,7 +1,7 @@
 use super::edit_timeline::EditTimeline;
 
 use feldspar::bb::prelude::*;
-use feldspar::{VoxelEditor, VoxelType};
+use feldspar::prelude::{VoxelEditor, VoxelType};
 
 use bevy::ecs::{prelude::*, system::SystemParam};
 

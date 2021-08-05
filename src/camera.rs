@@ -6,7 +6,7 @@ pub use cursor_ray::{CursorRay, CursorRayCalculator, CursorRayCameraTag};
 
 use cursor_ray::CursorRayPlugin;
 
-use feldspar::Witness;
+use feldspar::prelude::Witness;
 
 use bevy::{app::prelude::*, ecs::prelude::*, math::prelude::*};
 use smooth_bevy_cameras::{

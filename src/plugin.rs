@@ -1,13 +1,13 @@
 use crate::{
-    create_camera_entity, BevyConfig, CameraConfig, CameraPlugin, Config, CursorPositionPlugin,
-    EditToolsPlugin, ImmediateModePlugin, VoxelPickingPlugin,
+    create_camera_entity, open_voxel_database, save_map_to_db, BevyConfig, CameraConfig,
+    CameraPlugin, Config, CursorPositionPlugin, EditToolsPlugin, ImmediateModePlugin,
+    VoxelPickingPlugin,
 };
 
 use feldspar::{
     bb::core::prelude::*,
-    bb::storage::{prelude::*, sled},
-    SdfVoxelMap, ThreadLocalVoxelCache, VoxelDb, VoxelEditor, VoxelRenderAssets, VoxelType,
-    VoxelWorldPlugin,
+    bb::storage::prelude::*,
+    prelude::{VoxelEditor, VoxelRenderAssets, VoxelType, VoxelWorldPlugin},
 };
 
 use bevy::{
@@ -15,12 +15,10 @@ use bevy::{
     asset::{prelude::*, AssetPlugin},
     core::CorePlugin,
     ecs::prelude::*,
-    input::{Input, InputPlugin},
+    input::InputPlugin,
     math::prelude::*,
     pbr::{Light, LightBundle, PbrPlugin},
-    prelude::KeyCode,
     render::{prelude::*, wireframe::WireframeConfig, wireframe::WireframePlugin, RenderPlugin},
-    tasks::IoTaskPool,
     transform::{components::Transform, TransformPlugin},
     wgpu::{WgpuFeature, WgpuFeatures, WgpuOptions, WgpuPlugin},
     window::{WindowDescriptor, WindowPlugin},
@@ -130,23 +128,6 @@ pub enum EditorState {
     Editing,
 }
 
-fn open_voxel_database(mut commands: Commands, config: Res<Config>) {
-    let db = sled::Config::default()
-        .path(config.database_path.clone())
-        .use_compression(false)
-        .mode(sled::Mode::LowSpace)
-        .open()
-        .expect("Failed to open world database");
-    let main_tree = db
-        .open_tree("main_chunks")
-        .expect("Failed to open chunk database");
-    let edit_tree = db
-        .open_tree("edited_chunks")
-        .expect("Failed to open chunk database");
-
-    commands.insert_resource(VoxelDb::new(main_tree, edit_tree));
-}
-
 struct LoadingTexture(Handle<Texture>);
 
 fn start_loading_render_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -209,37 +190,4 @@ fn initialize_camera(commands: &mut Commands, camera_config: CameraConfig) {
     let eye = Vec3::new(100.0, 100.0, 100.0);
     let target = Vec3::new(0.0, 0.0, 0.0);
     create_camera_entity(commands, camera_config, eye, target);
-}
-
-fn save_map_to_db(
-    world_db: Res<VoxelDb>,
-    local_cache: Res<ThreadLocalVoxelCache>,
-    voxel_map: ResMut<SdfVoxelMap>,
-    pool: Res<IoTaskPool>,
-    keys: Res<Input<KeyCode>>,
-) {
-    if !keys.just_pressed(KeyCode::S) {
-        return;
-    }
-
-    log::info!("Saving map to DB");
-
-    let tls = local_cache.get();
-    let reader = voxel_map.reader(&tls);
-
-    let chunk_refs: Vec<_> = reader.storage().into_iter().map(|(k, v)| (*k, v)).collect();
-
-    let write_future = world_db.chunks().write_chunks(chunk_refs.into_iter());
-
-    for result in pool.scope(|s| s.spawn(write_future)) {
-        if result.is_err() {
-            panic!("Error saving to DB: {:?}", result);
-        }
-    }
-
-    world_db
-        .chunks()
-        .tree()
-        .flush()
-        .expect("Failed to flush DB");
 }

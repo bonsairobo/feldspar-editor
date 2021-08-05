@@ -2,8 +2,8 @@ use super::{CurrentTool, SnapshottingVoxelEditor};
 
 use crate::{CursorRay, VoxelCursor};
 
-use feldspar::bb::{core::prelude::*, storage::Sd8};
-use feldspar::VoxelType;
+use feldspar::bb::{core::prelude::*, storage::prelude::Sd8};
+use feldspar::prelude::VoxelType;
 
 use bevy::{ecs::prelude::*, input::prelude::*, prelude::*};
 

@@ -1,6 +1,9 @@
 use feldspar::{
-    ambient_sdf_array, bb::prelude::*, empty_sdf_chunk_hash_map, CompressibleSdfChunkMap,
-    SdfChunkHashMap, VoxelEditor,
+    bb::prelude::*,
+    prelude::{
+        ambient_sdf_array, empty_sdf_chunk_hash_map, CompressibleSdfChunkMap, SdfChunkHashMap,
+        VoxelEditor,
+    },
 };
 use std::collections::VecDeque;
 

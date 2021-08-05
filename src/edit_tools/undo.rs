@@ -1,6 +1,6 @@
 use super::edit_timeline::EditTimeline;
 
-use feldspar::VoxelEditor;
+use feldspar::prelude::VoxelEditor;
 
 use bevy::{ecs::prelude::*, input::prelude::*};
 

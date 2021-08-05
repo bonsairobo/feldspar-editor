@@ -17,9 +17,9 @@ use feldspar::{
     bb::{
         core::{prelude::*, SignedAxis3},
         mesh::OrientedCubeFace,
-        storage::Sd8,
+        prelude::Sd8,
     },
-    VoxelType,
+    prelude::VoxelType,
 };
 use smooth_bevy_cameras::controllers::unreal::UnrealCameraController;
 

@@ -10,7 +10,7 @@ use feldspar::{
             ncollide3d::query::Ray as NCRay,
         },
     },
-    VoxelBvt,
+    prelude::VoxelBvt,
 };
 
 /// The closest voxel that the window cursor is touching.

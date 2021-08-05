@@ -10,6 +10,7 @@ release = { lto = "thin" }
 
 [dependencies]
 approx = "0.4"
+futures = "0.3"
 env_logger = "0.8"
 log = "0.4"
 ron = "0.6"
