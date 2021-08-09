@@ -15,10 +15,9 @@ use feldspar::{
     prelude::{SdfVoxelMap, ThreadLocalVoxelCache, VoxelDb},
 };
 
-use bevy::ecs::prelude::*;
 use bevy::input::Input;
 use bevy::prelude::KeyCode;
-use bevy::tasks::IoTaskPool;
+use bevy::{ecs::prelude::*, tasks::ComputeTaskPool};
 
 /// Holds persistent metadata about editor state.
 pub struct EditorDb {
@@ -97,7 +96,7 @@ pub fn save_map_to_db(
     voxel_db: Res<VoxelDb>,
     local_cache: Res<ThreadLocalVoxelCache>,
     voxel_map: ResMut<SdfVoxelMap>,
-    pool: Res<IoTaskPool>,
+    pool: Res<ComputeTaskPool>,
     keys: Res<Input<KeyCode>>,
 ) {
     if !keys.just_pressed(KeyCode::S) {
@@ -117,13 +116,13 @@ pub fn save_map_to_db(
 
     log::info!("Writing {} deltas", deltas.len());
 
-    let write_future = voxel_db.chunks().update_current_version(deltas.into_iter());
-
-    for result in pool.scope(|s| s.spawn(write_future)) {
-        if result.is_err() {
-            panic!("Error saving to DB: {:?}", result);
-        }
+    let chunk_db = voxel_db.chunks();
+    let mut batch = chunk_db.start_delta_batch();
+    let compressed_future = batch.add_deltas(deltas.into_iter());
+    pool.scope(|scope| scope.spawn(compressed_future));
+    let result = chunk_db.apply_deltas_to_current_version(batch.build());
+    if result.is_err() {
+        panic!("Error saving to DB: {:?}", result);
     }
-
-    futures::executor::block_on(voxel_db.chunks().flush()).expect("Failed to flush chunk DB");
+    futures::executor::block_on(chunk_db.flush()).expect("Failed to flush chunk DB");
 }
