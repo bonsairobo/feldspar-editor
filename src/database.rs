@@ -12,7 +12,7 @@ use feldspar::{
             Delta, VersionedChunkDb3,
         },
     },
-    prelude::{SdfVoxelMap, ThreadLocalVoxelCache, VoxelDb},
+    prelude::{SdfVoxelMap, VoxelDb},
 };
 
 use bevy::input::Input;
@@ -94,7 +94,6 @@ pub fn open_voxel_database(mut commands: Commands, config: Res<Config>) {
 
 pub fn save_map_to_db(
     voxel_db: Res<VoxelDb>,
-    local_cache: Res<ThreadLocalVoxelCache>,
     voxel_map: ResMut<SdfVoxelMap>,
     pool: Res<ComputeTaskPool>,
     keys: Res<Input<KeyCode>>,
@@ -105,10 +104,8 @@ pub fn save_map_to_db(
 
     log::info!("Saving map to DB");
 
-    let tls = local_cache.get();
-    let reader = voxel_map.reader(&tls);
-
-    let deltas: Vec<_> = reader
+    let deltas: Vec<_> = voxel_map
+        .voxels
         .storage()
         .into_iter()
         .map(|(k, v)| Delta::Insert(*k, v))
@@ -118,7 +115,7 @@ pub fn save_map_to_db(
 
     let chunk_db = voxel_db.chunks();
     let mut batch = chunk_db.start_delta_batch();
-    let compressed_future = batch.add_deltas(deltas.into_iter());
+    let compressed_future = batch.add_and_compress_deltas(deltas.into_iter());
     pool.scope(|scope| scope.spawn(compressed_future));
     let result = chunk_db.apply_deltas_to_current_version(batch.build());
     if result.is_err() {
