@@ -80,7 +80,7 @@ pub fn open_voxel_database(mut commands: Commands, config: Res<Config>) {
         .write_current_version(current_version)
         .expect("Failed to write current version");
 
-    let voxel_db = VoxelDb::new(VersionedChunkDb3::new(
+    let voxel_db = VoxelDb::new(VersionedChunkDb3::new_with_compression(
         current_version,
         chunks,
         chunk_versions,
