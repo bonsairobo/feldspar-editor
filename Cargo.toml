@@ -27,8 +27,8 @@ features = ["bevy_wgpu", "bevy_winit", "render", "png", "x11"]
 
 [dependencies.feldspar]
 git = "https://github.com/bonsairobo/feldspar"
-branch = "main"
-# rev = "d18e010"
+# branch = "main"
+rev = "e09001c1"
 # path = "../feldspar"
 
 [dependencies.smooth-bevy-cameras]
