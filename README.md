@@ -1,5 +1,7 @@
 # Feldspar Editor
 
+**THIS PROJECT HAS MOVED TO [feldspar](https://github.com/bonsairobo/feldspar)**
+
 Voxel map editor using the [feldspar](https://github.com/bonsairobo/feldspar) voxel plugin for
 [bevy](https://github.com/bevyengine/bevy).
 
