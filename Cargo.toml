@@ -2,6 +2,7 @@
 name = "feldspar-editor"
 version = "0.1.0"
 authors = ["Duncan <bonsairobo@gmail.com>"]
+license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [profile]
